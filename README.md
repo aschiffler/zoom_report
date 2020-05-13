@@ -20,8 +20,9 @@ Set this optional if you enable the event notifications in the app settings (see
 - authToken: <your_twilio_auth_token>
 - defaultPhone: +491xxxxxxxx
 - botPhone: +14155xxxxxx
-This is needed to store the mapping of host_id and phone number in case you have more than one (deaultPhone) host_id
-!Check data privacy!
+
+This key value storage is needed to store the mapping of host_id and phone number in case you have more than one (deaultPhone) host_id
+!Check data privacy to be allowed to store!
 - keyvStore: mysql://zoom:zoomzoom@localhost:3306/zoom
 
 `node index.js`
@@ -31,3 +32,8 @@ visit `https://<your_server>:PORT` you will redirect to zoom.us where you have t
 Notes:
 - valid ssl certificate is needed to autohrize against zoom.us
 - code is quick and dirty only for testing/demo
+
+References:
+- https://marketplace.zoom.us/docs/api-reference/zoom-api
+- https://github.com/zoom/zoom-oauth-sample-app
+- https://www.twilio.com/docs/whatsapp/api
