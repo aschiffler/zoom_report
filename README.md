@@ -23,7 +23,7 @@ Set this optional if you enable the event notifications in the app settings (see
 
 This key value storage is needed to store the mapping of host_id and phone number in case you have more than one (deaultPhone) host_id
 !Check data privacy to be allowed to store!
-- keyvStore: mysql://zoom:zoomzoom@localhost:3306/zoom
+- keyvStore: <your_storage_adapter> # It can be eg. empty ' ' for in memory or 'mysql://user:pass@localhost:3306/dbname' or other see documentation here https://www.npmjs.com/package/keyv 
 
 `node index.js`
 
