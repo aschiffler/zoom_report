@@ -1,4 +1,5 @@
 'use strict';
+const request = require('request');
 const express = require('express');
 const bodyParser = require('body-parser');
 const rp = require('request-promise');
@@ -9,8 +10,9 @@ const xl = require('excel4node');
 const client = require('twilio')(process.env.accountSid, process.env.authToken);
 const Keyv = require('keyv');
 const keyv = new Keyv(process.env.keyvStore);
+keyv.on('error', err => console.log('Connection to mysql Error', err));
 
-app.set('trust proxy', 1); // trust first proxy
+app.set('trust proxy', 1) // trust first proxy
 app.use(session({
     secret: 'secret',
     resave: false,
@@ -39,11 +41,11 @@ function verifyToken(req, res, next) {
                 console.log('token is valid');
                 req.session.me = body;
                 req.session.save();
-                storePhonenumber(body.id,body.phone_number);
+                keyv.set(body.id,body.phone_number.replace(/\s/g, '')).then((result) => console.log('Stored ' + body.id + ' ' + body.phone_number.replace(/\s/g, '') + ' to database'));
                 next();
             })
             .catch(function (err) {
-                if (body.code === 124) {
+                if (body.code == 124) {
                     console.log('token expired');
                     req.session.token = '';
                     req.session.save();
@@ -55,7 +57,6 @@ function verifyToken(req, res, next) {
             });
     }
 }
-
 app.post('/trig', bodyParser.raw({ type: 'application/json' }), (req, res) => {
     let event;
     try {
@@ -63,19 +64,18 @@ app.post('/trig', bodyParser.raw({ type: 'application/json' }), (req, res) => {
     } catch (err) {
         res.status(400).send(`Webhook Error: ${err.message}`);
     }
-    //console.log(event.payload.object.participant.user_name);
-    storePhonenumber(event.payload.object.host_id,false).then((toPhone) => {
+    keyv.get(event.payload.object.host_id).then((toPhone) => {
         if (toPhone === '' || toPhone == null){
             toPhone = process.env.defaultPhone;
+            console.log('no phone_number found in database: ' + toPhone);
         }
-        console.log(toPhone);
         client.messages
             .create({
                 from: 'whatsapp:' + process.env.botPhone,
-                body: 'User: ' + event.payload.object.participant.user_name + ' waits for meeting: ' + event.payload.object.id + ' from host: ' + event.payload.object.host_id + ' to start',
+                body: event.payload.object.participant.user_name + ' is waiting for you (host_id: ' + event.payload.object.host_id + ') to start the meeting with id: ' + event.payload.object.id,
                 to: 'whatsapp:' + toPhone
             })
-            .then(message => console.log(message.sid));
+            .then(message => console.log('Send message to ' + toPhone + ' messID ' + message.sid));
     });
     res.status(200).send('triggered');
 });
@@ -159,7 +159,7 @@ app.get('/', verifyToken, async (req,res) => {
 });
 
 function processMeetings(instances,req,res,ws,wb){
-    instances.meetings.forEach((element) => {
+    instances.meetings.forEach((element, index,meetings) => {
         let options = {
             method: 'GET',
             uri: 'https://api.zoom.us/v2/past_meetings/'+ encodeURIComponent(encodeURIComponent(element.uuid)),
@@ -197,7 +197,7 @@ function dataModel(req,item,last,res,ws,wb){
             req.session.running--;
             req.session.save();
             //console.log(body);
-            body.participants.forEach((element) => {
+            body.participants.forEach((element, index, participants) => {
                 let row = req.session.row;
                 ws.cell(row,1).string(element.id);
                 ws.cell(row,2).string(element.name);
@@ -228,7 +228,7 @@ function dataModel(req,item,last,res,ws,wb){
 function renderHtml(body,responsestring){
     return(`
         <style>
-           @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,600&display=swap');@import url('https://necolas.github.io/normalize.css/8.0.1/normalize.css');html {color: #232333;font-family: 'Open Sans', Helvetica, Arial, sans-serif;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale;}h2 {font-weight: 700;font-size: 24px;}h4 {font-weight: 600;font-size: 14px;}.container {margin: 24px auto;padding: 16px;max-width: 720px;}.info {display: flex;align-items: center;}.info>div>span, .info>div>p {font-weight: 400;font-size: 13px;color: #747487;line-height: 16px;}.info>div>span::before {content: "👋";}.info>div>h2 {padding: 8px 0 6px;margin: 0;}.info>div>p {padding: 0;margin: 0;}.info>img {background: #747487;height: 96px;width: 96px;border-radius: 31.68px;overflow: hidden;margin: 0 20px 0 0;}.response {margin: 32px 0;display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;}.response>a {text-decoration: none;color: #2D8CFF;font-size: 14px;}.response>pre {overflow-x: scroll;background: #f6f7f9;padding: 1.2em 1.4em;border-radius: 10.56px;width: 100%;box-sizing: border-box;}
+           @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,600&display=swap');@import url('https://necolas.github.io/normalize.css/8.0.1/normalize.css');html {color: #232333;font-family: 'Open Sans', Helvetica, Arial, sans-serif;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale;}h2 {font-weight: 700;font-size: 24px;}h4 {font-weight: 600;font-size: 14px;}.container {margin: 24px auto;padding: 16px;max-width: 720px;}.info {display: flex;align-items: center;}.info>div>span, .info>div>p {font-weight: 400;font-size: 13px;color: #747487;line-height: 16px;}.info>div>span::before {content: "👋";}.info>div>h2 {padding: 8px 0 6px;margin: 0;}.info>div>p {padding: 0;margin: 0;}.info>img {background: #4e873e;height: 96px;width: 96px;border-radius: 31.68px;overflow: hidden;margin: 0 20px 0 0;}.response {margin: 32px 0;display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;}.response>a {text-decoration: none;color: #2D8CFF;font-size: 14px;}.response>pre {overflow-x: scroll;background: #f6f7f9;padding: 1.2em 1.4em;border-radius: 10.56px;width: 100%;box-sizing: border-box;}
         </style>
             <div class="container">
                 <div class="info">
@@ -254,14 +254,4 @@ function renderHtml(body,responsestring){
     `);
 }
 
-async function storePhonenumber (id,phone){
-    keyv.on('error', err => console.log('Connection to mysql Error', err));
-    if (phone !== false) {
-        await keyv.set(id,phone.replace(/\s/g, ''));
-        console.log('Stored ' + id + ' ' + phone + ' to database');
-        return;
-    }
-    return await keyv.get(id);
-}
-
-app.listen(process.env.PORT, () => console.log(`Zoom Report App listening at PORT: ` + process.env.PORT ));
+app.listen(process.env.PORT, () => console.log(`Zoom FHWS Report App listening at PORT: ` + process.env.PORT ))
