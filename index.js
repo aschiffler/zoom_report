@@ -40,8 +40,8 @@ function verifyToken(req, res, next) {
                 console.log('token is valid');
                 req.session.me = body;
                 req.session.save();
-let keyv = new Keyv(process.env.keyvStore);
-keyv.on('error', err => console.log('Connection to mysql Error', err));
+                let keyv = new Keyv(process.env.keyvStore);
+                keyv.on('error', err => console.log('Connection to mysql Error', err));
                 keyv.set(body.id,body.phone_number.replace(/\s/g, ''))
 					.then((result) => {
 						console.log('Stored ' + body.id + ' ' + body.phone_number.replace(/\s/g, '') + ' to database')
@@ -70,8 +70,8 @@ app.post('/trig', bodyParser.raw({ type: 'application/json' }), (req, res) => {
     } catch (err) {
         res.status(400).send(`Webhook Error: ${err.message}`);
     }
-let keyv = new Keyv(process.env.keyvStore);
-keyv.on('error', err => console.log('Connection to mysql Error', err));
+    let keyv = new Keyv(process.env.keyvStore);
+    keyv.on('error', err => console.log('Connection to mysql Error', err));
     keyv.get(event.payload.object.host_id).then((toPhone) => {
         if (toPhone === '' || toPhone == null){
             toPhone = process.env.defaultPhone;
