@@ -9,8 +9,7 @@ const app = express();
 const xl = require('excel4node');
 const client = require('twilio')(process.env.accountSid, process.env.authToken);
 const Keyv = require('keyv');
-const keyv = new Keyv(process.env.keyvStore);
-keyv.on('error', err => console.log('Connection to mysql Error', err));
+
 
 app.set('trust proxy', 1) // trust first proxy
 app.use(session({
@@ -41,7 +40,14 @@ function verifyToken(req, res, next) {
                 console.log('token is valid');
                 req.session.me = body;
                 req.session.save();
-                keyv.set(body.id,body.phone_number.replace(/\s/g, '')).then((result) => console.log('Stored ' + body.id + ' ' + body.phone_number.replace(/\s/g, '') + ' to database'));
+let keyv = new Keyv(process.env.keyvStore);
+keyv.on('error', err => console.log('Connection to mysql Error', err));
+                keyv.set(body.id,body.phone_number.replace(/\s/g, ''))
+					.then((result) => {
+						console.log('Stored ' + body.id + ' ' + body.phone_number.replace(/\s/g, '') + ' to database')
+					}, (reason) => {
+							console.log('[kevy reject] ' + reason)
+					});
                 next();
             })
             .catch(function (err) {
@@ -64,6 +70,8 @@ app.post('/trig', bodyParser.raw({ type: 'application/json' }), (req, res) => {
     } catch (err) {
         res.status(400).send(`Webhook Error: ${err.message}`);
     }
+let keyv = new Keyv(process.env.keyvStore);
+keyv.on('error', err => console.log('Connection to mysql Error', err));
     keyv.get(event.payload.object.host_id).then((toPhone) => {
         if (toPhone === '' || toPhone == null){
             toPhone = process.env.defaultPhone;
@@ -76,7 +84,9 @@ app.post('/trig', bodyParser.raw({ type: 'application/json' }), (req, res) => {
                 to: 'whatsapp:' + toPhone
             })
             .then(message => console.log('Send message to ' + toPhone + ' messID ' + message.sid));
-    });
+    }, (reason) => {
+		console.log('[kev reject] ' + reason);
+	});
     res.status(200).send('triggered');
 });
 
