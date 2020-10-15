@@ -14,13 +14,15 @@
     "excel4node": "^1.7.2",
     "express-session": "^1.17.1",
     "json2csv": "^5.0.1",
-    "keyv": "^4.0.1",
+    "keyv": "^4.0.3",
     "memorystore": "^1.6.2",
     "request-promise": "^4.2.5",
     "twilio": "^3.43.0"
   },
   "dependencies": {
+    "@keyv/sqlite": "^2.0.2",
+    "body-parser": "latest",
     "express": "^4.17.1",
-    "body-parser": "latest"
+    "request": "^2.88.2"
   }
 }
