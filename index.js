@@ -112,7 +112,7 @@ app.get('/login', (req,res)=>{
             })
             .catch(function (err) {
                 console.log('request to zoom failed to get token ' + err);
-                res.status(200).send(renderHtml(req.session.me, err));
+                res.status(200).send(renderHtml(req.session.me || 'error', err));
             });
         return;
     }
